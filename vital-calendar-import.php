@@ -52,14 +52,27 @@ function register_admin_import_page()
     add_submenu_page(
         PLUGIN_SLUG,
         PLUGIN_NAME,
-        'Dashboard',
+        'Category Import',
         PLUGIN_ROLE,
         PLUGIN_SLUG,
-        'import_csv_form',
+        'import_category_csv_form',
+    );
+    add_submenu_page(
+        PLUGIN_SLUG,
+        PLUGIN_NAME,
+        'Product Import',
+        PLUGIN_ROLE,
+        PLUGIN_SLUG,
+        'import_product_csv_form',
     );
 }
 
-function import_csv_form()
+function import_product_csv_form()
+{
+    return;
+}
+
+function import_category_csv_form()
 {
     if (TESTING) {
         $example_csv = file(plugin_dir_path(__FILE__) . "examples/calendar_data.csv");
