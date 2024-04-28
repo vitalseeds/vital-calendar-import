@@ -22,6 +22,19 @@ define('PLUGIN_ROLE', 'manage_options');
 define('PLUGIN_DOMAIN', 'vital-calendar-import');
 define('PLUGIN_NAME', 'Calendar import');
 
+define('REQUIRED_CSV_HEADERS', array(
+    "category",
+    "sow_months_start_month",
+    "sow_months_end_month",
+    // "sow_months2_start_month",
+    // "sow_months2_end_month",
+    "plant_months_start_month",
+    "plant_sow_months_end_month",
+    "harvest_months_start_month",
+    "harvest_sow_months_end_month",
+    // "note",
+));
+
 add_action('admin_menu', 'register_admin_import_page', 9);
 
 function register_admin_import_page()
@@ -51,9 +64,13 @@ function import_csv_form()
     if (TESTING) {
         $example_csv = file(plugin_dir_path(__FILE__) . "examples/calendar_data.csv");
         $rows = array_map('str_getcsv', $example_csv);
-        $data = process_rows($rows);
         echo "<h1>TESTING</h1>";
         echo "<p>Using <code>examples/calendar_data.csv</code></p>";
+        $data = process_rows($rows);
+        echo "<pre>";
+        print_r($data);
+        echo "</pre>";
+
         return;
     }
 
@@ -66,13 +83,29 @@ function import_csv_form()
     }
 }
 
+function validate_csv_headers($rows)
+{
+    $headers = $rows[0];
+    // check headers contain all required fields
+    if (array_diff(REQUIRED_CSV_HEADERS, $headers)) {
+        echo "<p>CSV headers do not match expected headers</p>";
+        return false;
+    }
+    echo "<pre>";
+    print_r($headers);
+    echo "</pre>";
+    return $headers;
+}
+
 function process_rows($rows)
 {
+    $headers = validate_csv_headers($rows);
+    if (!$headers) return;
+
     $data = [];
 
     foreach ($rows as $i => $value) {
         if ($i == 0) {
-            $headers = $value;
             continue;
         }
     }
