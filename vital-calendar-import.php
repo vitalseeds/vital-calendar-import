@@ -26,6 +26,7 @@ define('PLUGIN_ROLE', 'manage_options');
 define('PLUGIN_DOMAIN', 'vital-calendar-import');
 define('PLUGIN_NAME', 'Calendar import');
 
+// TODO: handle multiple sow/plant/harvest ranges
 define('REQUIRED_CSV_HEADERS', array(
     "category",
     "sow_months_start_month",
@@ -33,9 +34,9 @@ define('REQUIRED_CSV_HEADERS', array(
     // "sow_months2_start_month",
     // "sow_months2_end_month",
     "plant_months_start_month",
-    "plant_sow_months_end_month",
+    "plant_months_end_month",
     "harvest_months_start_month",
-    "harvest_sow_months_end_month",
+    "harvest_months_end_month",
     // "note",
 ));
 
@@ -106,6 +107,11 @@ function import_category_csv_form()
             case 2:
                 $data = $_SESSION['data'];
 
+                $results = populate_category_acf_fields($data);
+
+                unset($_SESSION['step']);
+                unset($_SESSION['data']);
+
                 include('includes/upload_form_3.php');
                 break;
             default:
@@ -168,8 +174,40 @@ function process_rows($rows)
         }
         $product_cat->description = 'truncated..';
         $row[0] = $product_cat;
-        $data[$product_cat->term_id] = array_combine($headers, $row);
+        // $data[$product_cat->term_id] = array_combine($headers, $row);
+        $data[] = array_combine($headers, $row);
     }
 
     return [$data, $errors];
+}
+
+function populate_category_acf_fields($data)
+{
+    $row = $data[0];
+    $results = [];
+
+    foreach ($data as $i => $row) {
+        $term_id = $row['category']->term_id;
+
+        $sow_months_start_month = $row['sow_months_start_month'];
+        $sow_months_end_month = $row['sow_months_end_month'];
+        $plant_months_start_month = $row['plant_months_start_month'];
+        $plant_months_end_month = $row['plant_months_end_month'];
+        $harvest_months_start_month = $row['harvest_months_start_month'];
+        $harvest_months_end_month = $row['harvest_months_end_month'];
+
+        // Update ACF fields for the product category
+        update_field('enable_sowing_calendar', 1, 'product_cat_' . $term_id);
+
+        update_field('sow_months_start_month', $sow_months_start_month, 'product_cat_' . $term_id);
+        update_field('sow_months_end_month', $sow_months_end_month, 'product_cat_' . $term_id);
+        update_field('plant_months_start_month', $plant_months_start_month, 'product_cat_' . $term_id);
+        update_field('plant_months_end_month', $plant_months_end_month, 'product_cat_' . $term_id);
+        update_field('harvest_months_start_month', $harvest_months_start_month, 'product_cat_' . $term_id);
+        update_field('harvest_months_end_month', $harvest_months_end_month, 'product_cat_' . $term_id);
+
+        $results[$term_id] = $row['category']->slug;
+    }
+
+    return $results;
 }
