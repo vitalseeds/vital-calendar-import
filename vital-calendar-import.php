@@ -79,20 +79,17 @@ function import_product_csv_form()
 function import_category_csv_form()
 {
     if (isset($_POST['submit']) || TESTING) {
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            $step = $_SESSION['step'] ?? 1;
-        } else {
-            $step = 1;
-        }
+        $step = isset($_POST['step']) ? $_POST['step'] : 1;
 
+        session_start();
         switch ($step) {
             case 1:
                 $csv_file = TESTING ? TEST_FILE : file($_FILES['csv_file']['tmp_name']);
 
                 $rows = array_map('str_getcsv', $csv_file);
+                $headers = validate_csv_headers($rows);
                 [$data, $errors] = process_rows($rows);
 
-                session_start();
                 $_SESSION['data'] = $data;
                 $_SESSION['step'] = 2;
 
@@ -100,6 +97,8 @@ function import_category_csv_form()
                 break;
             case 2:
                 $data = $_SESSION['data'];
+
+                include('includes/upload_form_3.php');
                 break;
             default:
                 break;
@@ -117,9 +116,7 @@ function validate_csv_headers($rows)
         echo "<p>CSV headers do not match expected headers</p>";
         return false;
     }
-    echo "<pre>";
-    print_r($headers);
-    echo "</pre>";
+
     return $headers;
 }
 

@@ -13,8 +13,15 @@
 
 <form action="" method="post" enctype="multipart/form-data">
     <input type="hidden" id="form-step" name="step" value="2">
-    <?php submit_button("Import") ?>;
+    <?php submit_button("Import") ?>
 </form>
+
+<h2>Headers</h2>
+<ul>
+    <?php foreach ($headers as $header) { ?>
+        <li><?php echo $header ?></li>
+    <?php } ?>
+</ul>
 
 <h2>Data</h2>
 <pre><?php print_r($data) ?></pre>
