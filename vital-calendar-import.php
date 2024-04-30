@@ -76,6 +76,14 @@ function import_product_csv_form()
     return;
 }
 
+/**
+ * This function handles the import category CSV form.
+ * It checks if the form has been submitted or if TESTING mode is enabled.
+ * Performs the necessary steps based on the current step.
+ * Step 1: processe the CSV file and validates the headers.
+ * Step 2: include the upload form for step 3.
+ * If none of the above conditions are met, it includes the upload form for step 1.
+ */
 function import_category_csv_form()
 {
     if (isset($_POST['submit']) || TESTING) {
@@ -108,6 +116,15 @@ function import_category_csv_form()
     }
 }
 
+/**
+ * Validates the headers of a CSV file.
+ *
+ * This function checks if the headers of a CSV file contain all the required fields.
+ * If the headers do not match the expected headers, an error message is displayed.
+ *
+ * @param array $rows The rows of the CSV file.
+ * @return array|false The headers of the CSV file if they are valid, false otherwise.
+ */
 function validate_csv_headers($rows)
 {
     $headers = $rows[0];
@@ -120,6 +137,17 @@ function validate_csv_headers($rows)
     return $headers;
 }
 
+
+/**
+ * Processes the rows of a CSV file.
+ *
+ * This function takes an array of rows from a CSV file and processes each row to create an associative array of data.
+ * It validates the CSV headers, retrieves the product category term, and combines the headers with each row to create
+ * the final data array. Any errors encountered during processing are collected and returned along with the data array.
+ *
+ * @param array $rows An array of rows from a CSV file.
+ * @return array An array containing the processed data and any errors encountered.
+ */
 function process_rows($rows)
 {
     $headers = validate_csv_headers($rows);
@@ -138,8 +166,9 @@ function process_rows($rows)
             $errors[] = "Category not found: " . $row[0];
             continue;
         }
-
-        $data[] = array_combine($headers, $row);
+        $product_cat->description = 'truncated..';
+        $row[0] = $product_cat;
+        $data[$product_cat->term_id] = array_combine($headers, $row);
     }
 
     return [$data, $errors];
