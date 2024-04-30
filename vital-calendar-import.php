@@ -17,6 +17,10 @@ Domain Path:  /languages
 // Define constants
 define('TESTING', true);
 
+if (TESTING) {
+    define('TEST_FILE', file(plugin_dir_path(__FILE__) . "examples/calendar_data.csv"));
+}
+
 define('PLUGIN_SLUG', 'vital-calendar-import');
 define('PLUGIN_ROLE', 'manage_options');
 define('PLUGIN_DOMAIN', 'vital-calendar-import');
@@ -74,25 +78,34 @@ function import_product_csv_form()
 
 function import_category_csv_form()
 {
-    if (TESTING) {
-        $example_csv = file(plugin_dir_path(__FILE__) . "examples/calendar_data.csv");
-        $rows = array_map('str_getcsv', $example_csv);
-        echo "<h1>TESTING</h1>";
-        echo "<p>Using <code>examples/calendar_data.csv</code></p>";
-        $data = process_rows($rows);
-        echo "<pre>";
-        print_r($data);
-        echo "</pre>";
+    if (isset($_POST['submit']) || TESTING) {
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            $step = $_SESSION['step'] ?? 1;
+        } else {
+            $step = 1;
+        }
 
-        return;
-    }
+        switch ($step) {
+            case 1:
+                $csv_file = TESTING ? TEST_FILE : file($_FILES['csv_file']['tmp_name']);
 
-    if (isset($_POST['submit'])) {
-        $csv_file = $_FILES['csv_file'];
-        $rows = array_map('str_getcsv', file($csv_file['tmp_name']));
-        $data = process_rows($rows);
+                $rows = array_map('str_getcsv', $csv_file);
+                [$data, $errors] = process_rows($rows);
+
+                session_start();
+                $_SESSION['data'] = $data;
+                $_SESSION['step'] = 2;
+
+                include('includes/upload_form_2.php');
+                break;
+            case 2:
+                $data = $_SESSION['data'];
+                break;
+            default:
+                break;
+        }
     } else {
-        include('includes/upload_form.php');
+        include('includes/upload_form_1.php');
     }
 }
 
@@ -116,27 +129,21 @@ function process_rows($rows)
     if (!$headers) return;
 
     $data = [];
+    $errors = [];
 
-    foreach ($rows as $i => $value) {
+    foreach ($rows as $i => $row) {
         if ($i == 0) {
             continue;
         }
+
+        $product_cat = get_term_by('name', $row[0], 'product_cat');
+        if (!$product_cat) {
+            $errors[] = "Category not found: " . $row[0];
+            continue;
+        }
+
+        $data[] = array_combine($headers, $row);
     }
 
-    return $data;
+    return [$data, $errors];
 }
-
-
-// function load_my_plugin_scripts($hook)
-// {
-
-//     // Load only on ?page=sample-page
-//     if ($hook != 'toplevel_page_sample-page') {
-//         return;
-//     }
-//     // Load style & scripts.
-//     wp_enqueue_style(PLUGIN_SLUG);
-//     wp_enqueue_script(PLUGIN_SLUG);
-// }
-
-// add_action('admin_enqueue_scripts', 'load_my_plugin_scripts');
