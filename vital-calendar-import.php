@@ -15,7 +15,7 @@ Domain Path:  /languages
 
 
 // Define constants
-define('TESTING', false);
+define('TESTING', true);
 
 if (TESTING) {
     define('TEST_FILE', file(plugin_dir_path(__FILE__) . "examples/calendar_data.csv"));
@@ -38,7 +38,47 @@ define('REQUIRED_CSV_HEADERS', array(
     "harvest_months_start_month",
     "harvest_months_end_month",
     // "note",
+
 ));
+
+define('VITAL_MONTH_CHOICE_VALUES', array(
+    'jan1',
+    'jan2',
+    'feb1',
+    'feb2',
+    'mar1',
+    'mar2',
+    'apr1',
+    'apr2',
+    'may1',
+    'may2',
+    'jun1',
+    'jun2',
+    'jul1',
+    'jul2',
+    'aug1',
+    'aug2',
+    'sep1',
+    'sep2',
+    'oct1',
+    'oct2',
+    'nov1',
+    'nov2',
+    'dec1',
+    'dec2',
+));
+
+// define('VITAL_CALENDAR_FIELDS', array(
+//     'enable_sowing_calendar',
+//     'vs_calendar_sow_month_parts',
+//     'vs_calendar_plant_month_parts',
+//     'vs_calendar_harvest_month_parts',
+//     'vs_calendar_other1_month_parts',
+//     'vs_calendar_other1_label',
+//     'vs_calendar_other2_month_parts',
+//     'vs_calendar_other2_label',
+// ));
+
 
 add_action('admin_menu', 'register_admin_import_page', 9);
 
@@ -81,7 +121,7 @@ function import_product_csv_form()
  * This function handles the import category CSV form.
  * It checks if the form has been submitted or if TESTING mode is enabled.
  * Performs the necessary steps based on the current step.
- * Step 1: processe the CSV file and validates the headers.
+ * Step 1: processes the CSV file and validates the headers.
  * Step 2: include the upload form for step 3.
  * If none of the above conditions are met, it includes the upload form for step 1.
  */
@@ -143,7 +183,6 @@ function validate_csv_headers($rows)
     return $headers;
 }
 
-
 /**
  * Processes the rows of a CSV file.
  *
@@ -181,6 +220,71 @@ function process_rows($rows)
     return [$data, $errors];
 }
 
+
+/**
+ * Maps a range of months to an array of corresponding scalar values (ACF choices).
+ *
+ * This function takes a start month and an end month as parameters and returns an array
+ * containing the corresponding scalar values for each month in the range. The start month
+ * and end month are inclusive.
+ *
+ * @param float $start_month The start month of the range.
+ * @param float $end_month The end month of the range.
+ * @return array An array of scalar values corresponding to the months in the range.
+ */
+
+function map_month__range_to_scalar($start_month, $end_month)
+{
+    $start_month = floatval($start_month);
+    $end_month = floatval($end_month);
+
+    // array index starts at 0, so minus 1
+    // there are 2 choices per month so multiply by 2
+    $start_month_choice = floor(($start_month - 1) * 2);
+    $end_month_choice = ceil(($end_month - 1) * 2);
+
+    $scalar_values = array_slice(VITAL_MONTH_CHOICE_VALUES, $start_month_choice, $end_month_choice - $start_month_choice);
+    return $scalar_values;
+}
+
+function get_month_parts_from_multiple_ranges($row, $start_field_name, $end_field_name)
+{
+    $start_field_names = array_filter(
+        $row,
+        fn ($key) => strpos($key, $start_field_name) === 0,
+        ARRAY_FILTER_USE_KEY
+    );
+    ksort($start_field_names);
+
+    $end_field_names = array_filter(
+        $row,
+        fn ($key) => strpos($key, $end_field_name) === 0,
+        ARRAY_FILTER_USE_KEY
+    );
+    ksort($end_field_names);
+
+    if (count($start_field_names) !== count($end_field_names)) {
+        return;
+    }
+    $month_parts = [];
+    for ($i = 0; $i < count($start_field_names); $i++) {
+        $range_start = current(array_slice($start_field_names, $i, 1, false));
+        $range_end = current(array_slice($end_field_names, $i, 1, true));
+
+        $month_parts = array_merge($month_parts, map_month__range_to_scalar($range_start, $range_end));
+    }
+    return $month_parts;
+}
+
+/**
+ * Populates the ACF fields for each product category with calendar data.
+ *
+ * This function takes an array of data (from CSV) containing calendar information for each category
+ * and updates the corresponding ACF fields for each category with the provided data.
+ *
+ * @param array $data An array of data containing calendar information for each category.
+ * @return array An array containing the updated ACF fields for each category.
+ */
 function populate_category_acf_fields($data)
 {
     $row = $data[0];
@@ -189,25 +293,18 @@ function populate_category_acf_fields($data)
     foreach ($data as $i => $row) {
         $term_id = $row['category']->term_id;
 
-        $sow_months_start_month = $row['sow_months_start_month'];
-        $sow_months_end_month = $row['sow_months_end_month'];
-        $plant_months_start_month = $row['plant_months_start_month'];
-        $plant_months_end_month = $row['plant_months_end_month'];
-        $harvest_months_start_month = $row['harvest_months_start_month'];
-        $harvest_months_end_month = $row['harvest_months_end_month'];
+        $sow_month_parts = get_month_parts_from_multiple_ranges($row, 'sow_months_start_month', 'sow_months_end_month');
+        $plant_month_parts = get_month_parts_from_multiple_ranges($row, 'plant_months_start_month', 'plant_months_end_month');
+        $harvest_month_parts = get_month_parts_from_multiple_ranges($row, 'harvest_months_start_month', 'harvest_months_end_month');
 
         // Update ACF fields for the product category
         update_field('enable_sowing_calendar', 1, 'product_cat_' . $term_id);
 
-        update_field('sow_months_start_month', $sow_months_start_month, 'product_cat_' . $term_id);
-        update_field('sow_months_end_month', $sow_months_end_month, 'product_cat_' . $term_id);
-        update_field('plant_months_start_month', $plant_months_start_month, 'product_cat_' . $term_id);
-        update_field('plant_months_end_month', $plant_months_end_month, 'product_cat_' . $term_id);
-        update_field('harvest_months_start_month', $harvest_months_start_month, 'product_cat_' . $term_id);
-        update_field('harvest_months_end_month', $harvest_months_end_month, 'product_cat_' . $term_id);
+        update_field('vs_calendar_sow_month_parts', $sow_month_parts, 'product_cat_' . $term_id);
+        update_field('vs_calendar_plant_month_parts', $plant_month_parts, 'product_cat_' . $term_id);
+        update_field('vs_calendar_harvest_month_parts', $harvest_month_parts, 'product_cat_' . $term_id);
 
         $results[$term_id] = $row['category']->slug;
     }
-
     return $results;
 }
