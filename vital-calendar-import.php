@@ -15,7 +15,7 @@ Domain Path:  /languages
 
 
 // Define constants
-define('TESTING', true);
+define('TESTING', false);
 
 if (TESTING) {
     define('TEST_FILE', file(plugin_dir_path(__FILE__) . "examples/calendar_data.csv"));
