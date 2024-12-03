@@ -91,7 +91,7 @@ function register_admin_import_page()
         PLUGIN_SLUG,
         false,
         'dashicons-admin-generic',
-        ''
+        29
     );
 
     add_submenu_page(
@@ -251,14 +251,14 @@ function get_month_parts_from_multiple_ranges($row, $start_field_name, $end_fiel
 {
     $start_field_names = array_filter(
         $row,
-        fn ($key) => strpos($key, $start_field_name) === 0,
+        fn($key) => strpos($key, $start_field_name) === 0,
         ARRAY_FILTER_USE_KEY
     );
     ksort($start_field_names);
 
     $end_field_names = array_filter(
         $row,
-        fn ($key) => strpos($key, $end_field_name) === 0,
+        fn($key) => strpos($key, $end_field_name) === 0,
         ARRAY_FILTER_USE_KEY
     );
     ksort($end_field_names);
